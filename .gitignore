@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environmentální složky (virtuální prostředí)
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribuční soubory
+build/
+dist/
+*.egg-info/
+*.eggs/
+
+# Nastavení editoru
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Zálohy editoru
+*.swp
+*.bak
+*.tmp
+
+# Logy a ladění
+*.log
+*.pot
+*.mo
+
+# Nastavení pro testing/coverage
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Nastavení pro PyInstaller
+*.manifest
+*.spec
+
+# Jupyter Notebooky
+.ipynb_checkpoints/
+
+# MyPy
+.mypy_cache/
+
+# Pyre
+.pyre/
+
+# Celery pracovní fronty
+celerybeat-schedule
+*.pid
+
+# Profilování dat
+.prof
+
+# Pylint
+.pylint.d/
+.env
