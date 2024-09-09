@@ -4,6 +4,7 @@ import uuid
 from depedencies.common import get_buddy_service
 from core.config import settings
 from services.text_cleaner import clean_response_async
+from services.buddy_service import BuddyClient
 
 
 # Initialize FastAPI
@@ -32,24 +33,24 @@ async def root():
 
 
 @app.post("/start_conversation", response_model=Conversation, dependencies=[Depends(verify_api_key)])
-async def start_conversation():
+async def start_conversation(buddy_client: BuddyClient = Depends(get_buddy_service)):
     conversation_id = str(uuid.uuid4())  # Generate a unique conversation ID
-    await get_buddy_service().start_conversation(conversation_id)
+    await buddy_client.start_conversation(conversation_id)
     return {"conversation_id": conversation_id}
 
 @app.post("/send_message/{conversation_id}", response_model=BotResponse, dependencies=[Depends(verify_api_key)])
-async def send_message(conversation_id: str, message: Message):
+async def send_message(conversation_id: str, message: Message, buddy_client: BuddyClient = Depends(get_buddy_service)):
     try:
         # Add user message to history
-        await get_buddy_service().add_message(conversation_id, message.user_message)
+        await buddy_client.add_message(conversation_id, message.user_message)
         
         # Call the chat API and get bot response
-        response = await get_buddy_service().call_chat_api(conversation_id)
+        response: dict = await buddy_client.call_chat_api(conversation_id)
         bot_reply = response.get('text', 'No response')
         cleared_bot_reply = await clean_response_async(bot_reply)
         
         # Add bot response to history
-        await get_buddy_service().add_message(conversation_id, message.user_message, cleared_bot_reply)
+        await buddy_client.add_message(conversation_id, message.user_message, cleared_bot_reply)
         
         return {"bot_reply": cleared_bot_reply}
     except ValueError:
