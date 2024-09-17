@@ -65,6 +65,8 @@ class BuddyClient:
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
+                logger.debug(f"Calling API with data: {serialized_data}")
+                logger.debug(f"API URL: {self.api_url} and headers: {self.headers}")
                 response = await client.post(self.api_url, headers=self.headers, data=serialized_data)
                 response.raise_for_status()
                 logger.info("API call successful.")
