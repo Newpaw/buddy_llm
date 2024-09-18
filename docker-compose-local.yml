@@ -1,26 +1,19 @@
-networks:
-  nginx_default:
-    external: true
-  backend:
-
-
 services:
   app:
     build: .
     ports:
-      - "8444:8000"
+      - "8000:8000"
     depends_on:
       - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env  # Přidání .env souboru
     volumes:
       - .:/app
     command: uvicorn api.v1.assistent:app --host 0.0.0.0 --port 8000
-    networks:
-      - backend
-      - nginx_default
 
   redis:
     image: "redis:alpine"
-    networks:
-      - backend
+    ports:
+      - "6379:6379"
