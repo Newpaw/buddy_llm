@@ -65,7 +65,7 @@ def clean_response_sync(text: str):
         "např.": "například",
         "atd.": "a tak dále",
         "ap.": "aproximativně",
-        "Kč" : "korun českých",
+        "Kč" : "korun",
     }
     for abbr, full in abbreviations.items():
         cleaned_text = re.sub(r'\b' + re.escape(abbr) + r'\b', full, cleaned_text)
