@@ -4,11 +4,12 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 import unicodedata
 import emoji
+from urllib.parse import urlparse
 
 # Funkce pro odstranění emoji pomocí demojize a regex
 def remove_emoji(text):
     '''
-    Remove all emojis from the input text using the emoji library's replace_emoji function.
+    Remove all emojis from the input text using the emoji library's demojize function.
     '''
     demojized_text = emoji.demojize(text)
     clean_text = re.sub(r':[^:\s]+:', '', demojized_text)
@@ -20,10 +21,38 @@ def normalize_unicode(text):
     '''
     return unicodedata.normalize('NFKC', text)
 
+def extract_domain(url):
+    '''
+    Extract the first and second level domain from a URL.
+    
+    Args:
+        url (str): The URL to extract the domain from.
+    
+    Returns:
+        str: The extracted domain (e.g., 'o2.cz').
+    '''
+    try:
+        parsed_url = urlparse(url)
+        hostname = parsed_url.hostname
+        if not hostname:
+            # Pokud URL neobsahuje schéma, zkuste přidat 'http://' a znovu analyzovat
+            parsed_url = urlparse('http://' + url)
+            hostname = parsed_url.hostname
+            if not hostname:
+                return url  # Pokud stále nemůžeme získat hostname, vraťte původní text
+
+        parts = hostname.split('.')
+        if len(parts) >= 2:
+            return '.'.join(parts[-2:])  # Získání posledních dvou částí domény
+        else:
+            return hostname  # Pokud doména nemá dostatek částí, vraťte ji celou
+    except Exception as e:
+        # V případě chyby vrátíme původní text
+        return url
 
 def clean_response_sync(text: str):
     '''
-    Clean the input text by removing HTML tags, URLs, emojis, unwanted characters, and expanding abbreviations.
+    Clean the input text by removing HTML tags, URLs (replaced by their domains), emojis, unwanted characters, and expanding abbreviations.
     
     Args:
         text (str): The input text to be cleaned.
@@ -36,36 +65,46 @@ def clean_response_sync(text: str):
     soup = BeautifulSoup(text, "html.parser")
     cleaned_text = soup.get_text()
 
-    # Remove Markdown links [text](url)
-    cleaned_text = re.sub(r'\[.*?\]\(.*?\)', '', cleaned_text)
+    # Remove Markdown links [text](url) a zachovat text
+    cleaned_text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1', cleaned_text)
 
-    # Remove plain URLs (http, https, www)
-    cleaned_text = re.sub(r'http\S+|www\.\S+', '', cleaned_text)
+    # Funkce pro nahrazení URL jejich doménami
+    def replace_url_with_domain(match):
+        url = match.group(0)
+        domain = extract_domain(url)
+        return domain
 
-    # Remove text within any brackets (parentheses, curly braces, square brackets)
+    # Nahrazení čistých URL (http, https, www) jejich doménami
+    url_pattern = re.compile(r'(https?://\S+|www\.\S+)')
+    cleaned_text = url_pattern.sub(replace_url_with_domain, cleaned_text)
+
+    # Odstranění textu v závorkách (když již zůstaly nějaké závorky)
     cleaned_text = re.sub(r'\(.*?\)|\{.*?\}|\[.*?\]', '', cleaned_text)
 
-    # Remove unwanted special characters but keep basic punctuation
+    # Odstranění nežádoucích speciálních znaků, ale ponechání základní interpunkce
     cleaned_text = re.sub(r'[^\w\s.,!?]', '', cleaned_text)
 
+    # Odstranění emoji
     cleaned_text = remove_emoji(cleaned_text)
 
-    # Normalize Unicode characters
+    # Normalizace Unicode znaků
     cleaned_text = normalize_unicode(cleaned_text)
 
-    # Remove unwanted special characters but keep basic punctuation
+    # Odstranění nadbytečných mezer a ořezání textu
     cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
 
-    # Replace multiple punctuation marks with single ones
+    # Nahrazení vícenásobných interpunkčních znamének jedním
     cleaned_text = re.sub(r'\.{2,}', '.', cleaned_text)
     cleaned_text = re.sub(r'\!{2,}', '!', cleaned_text)
     cleaned_text = re.sub(r'\?{2,}', '?', cleaned_text)
 
+    # Rozšíření zkratek
     abbreviations = {
         "např.": "například",
         "atd.": "a tak dále",
         "ap.": "aproximativně",
         "Kč" : "korun",
+        "O2" : "ou two"
     }
     for abbr, full in abbreviations.items():
         cleaned_text = re.sub(r'\b' + re.escape(abbr) + r'\b', full, cleaned_text)
@@ -80,3 +119,18 @@ async def clean_response_async(text):
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, clean_response_sync, text)
+
+# Příklad použití
+#if __name__ == "__main__":
+#    sample_texts = [
+#        "https://o2.cz",
+#        "Navštivte naši stránku https://o2.cz pro více informací.",
+#        "Zkontrolujte www.o2.cz a kontaktujte nás!",
+#        "Toto je text bez URL.",
+#        "Emojis 😊 a URL https://www.example.com/test?param=1"
+#    ]
+#    
+#    for sample_text in sample_texts:
+#        cleaned = asyncio.run(clean_response_async(sample_text))
+#        print(f"Původní text: '{sample_text}'")
+#        print(f"Čistý text: '{cleaned}'\n")
