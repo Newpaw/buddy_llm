@@ -4,3 +4,4 @@ httpx
 aioredis
 pydantic_settings
 beautifulsoup4
+emoji
