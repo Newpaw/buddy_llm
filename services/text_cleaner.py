@@ -61,50 +61,53 @@ def clean_response_sync(text: str):
         str: The cleaned text.
     '''
 
-    # Remove HTML tags
+    # 1. Odstranění HTML tagů
     soup = BeautifulSoup(text, "html.parser")
     cleaned_text = soup.get_text()
 
-    # Remove Markdown links [text](url) a zachovat text
+    # 2. Odstranění Markdown odkazů [text](url) a zachování pouze textu
     cleaned_text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1', cleaned_text)
 
-    # Funkce pro nahrazení URL jejich doménami
+    # 3. Odstranění závorek obsahujících URL, např. [https://o2.cz]
+    # Tento krok odstraní celé obsah závorek, pokud obsahuje URL
+    cleaned_text = re.sub(r'\[(https?://\S+|www\.\S+)\]', '', cleaned_text)
+
+    # 4. Nahrazení čistých URL (http, https, www) jejich doménami
     def replace_url_with_domain(match):
         url = match.group(0)
         domain = extract_domain(url)
         return domain
 
-    # Nahrazení čistých URL (http, https, www) jejich doménami
     url_pattern = re.compile(r'(https?://\S+|www\.\S+)')
     cleaned_text = url_pattern.sub(replace_url_with_domain, cleaned_text)
 
-    # Odstranění textu v závorkách (když již zůstaly nějaké závorky)
+    # 5. Odstranění zbývajících závorek (parentheses, curly braces, square brackets)
     cleaned_text = re.sub(r'\(.*?\)|\{.*?\}|\[.*?\]', '', cleaned_text)
 
-    # Odstranění nežádoucích speciálních znaků, ale ponechání základní interpunkce
+    # 6. Odstranění nežádoucích speciálních znaků, ale ponechání základní interpunkce
     cleaned_text = re.sub(r'[^\w\s.,!?]', '', cleaned_text)
 
-    # Odstranění emoji
+    # 7. Odstranění emoji
     cleaned_text = remove_emoji(cleaned_text)
 
-    # Normalizace Unicode znaků
+    # 8. Normalizace Unicode znaků
     cleaned_text = normalize_unicode(cleaned_text)
 
-    # Odstranění nadbytečných mezer a ořezání textu
+    # 9. Odstranění nadbytečných mezer a ořezání textu
     cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
 
-    # Nahrazení vícenásobných interpunkčních znamének jedním
+    # 10. Nahrazení vícenásobných interpunkčních znamének jedním
     cleaned_text = re.sub(r'\.{2,}', '.', cleaned_text)
     cleaned_text = re.sub(r'\!{2,}', '!', cleaned_text)
     cleaned_text = re.sub(r'\?{2,}', '?', cleaned_text)
 
-    # Rozšíření zkratek
+    # 11. Rozšíření zkratek
     abbreviations = {
         "např.": "například",
         "atd.": "a tak dále",
         "ap.": "aproximativně",
         "Kč" : "korun",
-        "O2" : "ou two"
+        "O2" : "ou two"  
     }
     for abbr, full in abbreviations.items():
         cleaned_text = re.sub(r'\b' + re.escape(abbr) + r'\b', full, cleaned_text)
@@ -127,7 +130,11 @@ async def clean_response_async(text):
 #        "Navštivte naši stránku https://o2.cz pro více informací.",
 #        "Zkontrolujte www.o2.cz a kontaktujte nás!",
 #        "Toto je text bez URL.",
-#        "Emojis 😊 a URL https://www.example.com/test?param=1"
+#        "Emojis 😊 a URL https://www.example.com/test?param=1",
+#        "[https://o2.cz] ap.",
+#        "Další URL: http://subdomain.example.co.uk/path",
+#        "[www.example.com] atd.",
+#        "Text před [https://o2.cz] a text za."
 #    ]
 #    
 #    for sample_text in sample_texts:
