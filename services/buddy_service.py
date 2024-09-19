@@ -5,8 +5,9 @@ import aioredis
 from core.config import settings
 
 
-# Configure the logger
-logging.basicConfig(level=logging.DEBUG)
+log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+
+logging.basicConfig(level=log_level)
 logger = logging.getLogger(__name__)
 
 class BuddyClient:
