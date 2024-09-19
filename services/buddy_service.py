@@ -70,7 +70,7 @@ class BuddyClient:
                 logger.debug(f"API URL: {self.api_url} and headers: {self.headers}")
                 response = await client.post(self.api_url, headers=self.headers, data=serialized_data)
                 response.raise_for_status()
-                logger.info("API call successful.")
+                logger.info(f"API call with conversation {conversation_id} successful.")
                 return response.json()
             except httpx.HTTPStatusError as http_err:
                 error_content = response.text if response.content else "No content"
