@@ -6,7 +6,7 @@ import unicodedata
 import emoji
 from urllib.parse import urlparse
 
-# Funkce pro odstranění emoji pomocí demojize a regex
+# Function to remove emojis using demojize and regex
 def remove_emoji(text):
     '''
     Remove all emojis from the input text using the emoji library's demojize function.
@@ -35,19 +35,19 @@ def extract_domain(url):
         parsed_url = urlparse(url)
         hostname = parsed_url.hostname
         if not hostname:
-            # Pokud URL neobsahuje schéma, zkuste přidat 'http://' a znovu analyzovat
+            # If the URL does not contain a scheme, try adding 'http://' and parse again
             parsed_url = urlparse('http://' + url)
             hostname = parsed_url.hostname
             if not hostname:
-                return url  # Pokud stále nemůžeme získat hostname, vraťte původní text
+                return url  # If we still cannot get the hostname, return the original text
 
         parts = hostname.split('.')
         if len(parts) >= 2:
-            return '.'.join(parts[-2:])  # Získání posledních dvou částí domény
+            return '.'.join(parts[-2:])  # Getting the last two parts of the domain
         else:
-            return hostname  # Pokud doména nemá dostatek částí, vraťte ji celou
+            return hostname  # If the domain does not have enough parts, return it whole
     except Exception as e:
-        # V případě chyby vrátíme původní text
+        # In case of an error, return the original text
         return url
 
 def clean_response_sync(text: str):
@@ -61,18 +61,18 @@ def clean_response_sync(text: str):
         str: The cleaned text.
     '''
 
-    # 1. Odstranění HTML tagů
+    # 1. Remove HTML tags
     soup = BeautifulSoup(text, "html.parser")
     cleaned_text = soup.get_text()
 
-    # 2. Odstranění Markdown odkazů [text](url) a zachování pouze textu
+    # 2. Remove Markdown links [text](url) and keep only the text
     cleaned_text = re.sub(r'\[([^\]]+)\]\((https?://[^\)]+)\)', r'\1', cleaned_text)
 
-    # 3. Odstranění závorek obsahujících URL, např. [https://o2.cz]
-    # Tento krok odstraní celé obsah závorek, pokud obsahuje URL
+    # 3. Remove brackets containing URLs, e.g., [https://o2.cz]
+    # This step removes the entire content of the brackets if it contains a URL
     cleaned_text = re.sub(r'\[(https?://\S+|www\.\S+)\]', '', cleaned_text)
 
-    # 4. Nahrazení čistých URL (http, https, www) jejich doménami
+    # 4. Replace plain URLs (http, https, www) with their domains
     def replace_url_with_domain(match):
         url = match.group(0)
         domain = extract_domain(url)
@@ -81,27 +81,27 @@ def clean_response_sync(text: str):
     url_pattern = re.compile(r'(https?://\S+|www\.\S+)')
     cleaned_text = url_pattern.sub(replace_url_with_domain, cleaned_text)
 
-    # 5. Odstranění zbývajících závorek (parentheses, curly braces, square brackets)
+    # 5. Remove remaining brackets (parentheses, curly braces, square brackets)
     cleaned_text = re.sub(r'\(.*?\)|\{.*?\}|\[.*?\]', '', cleaned_text)
 
-    # 6. Odstranění nežádoucích speciálních znaků, ale ponechání základní interpunkce
+    # 6. Remove unwanted special characters, but keep basic punctuation
     cleaned_text = re.sub(r'[^\w\s.,!?]', '', cleaned_text)
 
-    # 7. Odstranění emoji
+    # 7. Remove emojis
     cleaned_text = remove_emoji(cleaned_text)
 
-    # 8. Normalizace Unicode znaků
+    # 8. Normalize Unicode characters
     cleaned_text = normalize_unicode(cleaned_text)
 
-    # 9. Odstranění nadbytečných mezer a ořezání textu
+    # 9. Remove extra spaces and trim the text
     cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
 
-    # 10. Nahrazení vícenásobných interpunkčních znamének jedním
+    # 10. Replace multiple punctuation marks with a single one
     cleaned_text = re.sub(r'\.{2,}', '.', cleaned_text)
     cleaned_text = re.sub(r'\!{2,}', '!', cleaned_text)
     cleaned_text = re.sub(r'\?{2,}', '?', cleaned_text)
 
-    # 11. Rozšíření zkratek
+    # 11. Expand abbreviations
     abbreviations = {
         "např.": "například",
         "atd.": "a tak dále",
@@ -114,7 +114,7 @@ def clean_response_sync(text: str):
 
     return cleaned_text
 
-# Asynchronní obal pro čištění odpovědi
+# Asynchronous wrapper for cleaning response
 async def clean_response_async(text):
     '''
         Asynchronously clean the input text by running the clean_response_sync function in a thread pool.
@@ -123,7 +123,7 @@ async def clean_response_async(text):
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, clean_response_sync, text)
 
-# Příklad použití
+# Example usage
 #if __name__ == "__main__":
 #    sample_texts = [
 #        "https://o2.cz",
